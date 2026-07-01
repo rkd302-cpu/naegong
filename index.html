@@ -129,14 +129,23 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-ser
 .grade-tag.g34 { background: #EFF6FF; color: #1E40AF; }
 .grade-tag.g56 { background: #FFF7ED; color: #92400E; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: flex; align-items: center; justify-content: center; }
-.modal { background: #fff; border-radius: 12px; width: 620px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
-.modal-head { padding: 16px 20px; border-bottom: 1px solid #E5E7EB; display: flex; align-items: center; justify-content: space-between; }
-.modal-head h3 { font-size: 18px; font-weight: 700; }
+.modal { background: #fff; border-radius: 12px; width: 820px; max-height: 88vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+.modal-head { padding: 14px 20px; border-bottom: 1px solid #E5E7EB; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.modal-head h3 { font-size: 17px; font-weight: 700; }
 .modal-acts { display: flex; gap: 8px; align-items: center; }
-.btn-copy { font-size: 14px; padding: 5px 14px; border: 1px solid #D1D5DB; border-radius: 6px; background: #fff; cursor: pointer; font-family: inherit; }
+.btn-copy-all { font-size: 14px; padding: 7px 18px; border: none; border-radius: 6px; background: #4F46E5; color: #fff; cursor: pointer; font-family: inherit; font-weight: 600; }
+.btn-copy-all:hover { background: #4338CA; }
 .btn-close { font-size: 18px; background: none; border: none; cursor: pointer; color: #9CA3AF; padding: 0 4px; line-height: 1; }
-.modal-body { padding: 16px 20px; overflow-y: auto; }
-.mail-pre { white-space: pre-wrap; font-size: 15px; line-height: 1.85; color: #374151; background: #F9FAFB; border-radius: 8px; padding: 14px 16px; }
+.modal-body { padding: 0; overflow-y: auto; }
+.mail-preview { padding: 24px 28px; font-size: 14px; line-height: 1.8; color: #1a1a1a; font-family: "Malgun Gothic", sans-serif; }
+.mail-preview p { margin: 0 0 12px 0; }
+.mail-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+.mail-table th { background: #C5CDE8; color: #1a1a1a; font-weight: 600; padding: 8px 10px; text-align: center; border: 1px solid #9BA8CA; }
+.mail-table td { padding: 8px 10px; border: 1px solid #D1D5DB; vertical-align: middle; text-align: center; }
+.mail-table td.desc-cell { text-align: left; }
+.mail-table td.grade-cell { font-weight: 600; }
+.mail-subject-row { background: #F3F4F6; border-radius: 8px; padding: 10px 14px; margin-bottom: 4px; font-size: 13px; color: #6B7280; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.mail-subject-text { font-size: 14px; font-weight: 600; color: #111; }
 </style>
 </head>
 <body>
@@ -252,14 +261,23 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-ser
 <div class="modal-overlay" id="mail-modal" style="display:none" onclick="if(event.target===this)closeMail()">
   <div class="modal">
     <div class="modal-head">
-      <h3>✉️ 공지 메일</h3>
+      <div>
+        <h3>✉️ 메일 미리보기</h3>
+        <div style="font-size:12px;color:#9CA3AF;margin-top:2px">복사 후 메일에 바로 붙여넣으세요</div>
+      </div>
       <div class="modal-acts">
-        <button class="btn-copy" onclick="copyMail()">복사</button>
+        <button class="btn-copy-all" id="btn-copy-subj" onclick="copySubject()">제목 복사</button>
+        <button class="btn-copy-all" id="btn-copy-all" onclick="copyAll()">내용 전체복사</button>
+        <button class="btn-copy-all" id="btn-copy-tbl" onclick="copyTableOnly()" style="background:#3B82F6">표만 복사</button>
         <button class="btn-close" onclick="closeMail()">✕</button>
       </div>
     </div>
+    <div class="mail-subject-row">
+      <span style="color:#9CA3AF;font-size:13px;flex-shrink:0">제목</span>
+      <span class="mail-subject-text" id="mail-subject"></span>
+    </div>
     <div class="modal-body">
-      <div class="mail-pre" id="mail-pre"></div>
+      <div class="mail-preview" id="mail-preview"></div>
     </div>
   </div>
 </div>
@@ -330,7 +348,7 @@ function initMonth() {
 function updateBadge() {
   const m = document.getElementById('sel-month').value;
   const w = document.getElementById('sel-week').value;
-  const y = new Date().getFullYear();
+  const y = new Date().getFullYear();https://github.com/rkd302-cpu/naegong/blob/main/index.html
   document.getElementById('week-badge').textContent = y + '년 ' + m + '월 ' + w + '주차';
 }
 
@@ -651,29 +669,148 @@ function renderRight() {
   container.appendChild(items);
 }
 
+function getMailDateRange() {
+  var month = parseInt(document.getElementById('sel-month').value);
+  var week = parseInt(document.getElementById('sel-week').value);
+  var year = new Date().getFullYear();
+  var firstDay = new Date(year, month - 1, 1);
+  var dayOfWeek = firstDay.getDay();
+  var daysToFriday = (5 - dayOfWeek + 7) % 7;
+  var firstFriday = new Date(year, month - 1, 1 + daysToFriday);
+  var friday = new Date(firstFriday);
+  friday.setDate(firstFriday.getDate() + (week - 1) * 7);
+  var thursday = new Date(friday);
+  thursday.setDate(friday.getDate() + 6);
+  function fmt(d) { return (d.getMonth()+1) + '/' + d.getDate(); }
+  return { start: fmt(friday), end: fmt(thursday) };
+}
+
+function buildTableHTML(range) {
+  var bdr = 'border:1px solid #9BA8CA;';
+  var html = '<table style="border-collapse:collapse;width:100%;font-family:Malgun Gothic,sans-serif;font-size:13px">';
+  // 표 제목 행
+  html += '<tr><td colspan="6" style="' + bdr + 'background:#D6E4F0;padding:14px 10px;text-align:center;font-size:15px;font-weight:700">';
+  html += '[' + range.start + ' ~ ' + range.end + '] 글로벌리더십 내공상자 추천 영상';
+  html += '</td></tr>';
+  // 헤더 행
+  html += '<tr>';
+  ['추천학년','카테고리','시리즈','콘텐츠명','내용','콘텐츠넘버'].forEach(function(h) {
+    html += '<th style="' + bdr + 'background:#C5CDE8;padding:8px 10px;text-align:center;font-weight:600;font-size:13px">' + h + '</th>';
+  });
+  html += '</tr>';
+  // 데이터 행
+  GRADES.forEach(function(g) {
+    var items = state.selected[g.key];
+    var gradeText = g.label.replace('~','~');
+    if (g.key === 'g12') gradeText = '1-2학년';
+    if (g.key === 'g34') gradeText = '3-4학년';
+    if (g.key === 'g56') gradeText = '5-6학년';
+    items.forEach(function(item, i) {
+      html += '<tr>';
+      if (i === 0) {
+        html += '<td style="' + bdr + 'padding:8px 10px;text-align:center;font-weight:600;vertical-align:middle" rowspan="' + items.length + '">' + gradeText + '</td>';
+      }
+      html += '<td style="' + bdr + 'padding:8px 10px;text-align:center">' + item.c + '</td>';
+      html += '<td style="' + bdr + 'padding:8px 10px;text-align:center">' + item.s + '</td>';
+      html += '<td style="' + bdr + 'padding:8px 10px;text-align:center">' + item.t + '</td>';
+      html += '<td style="' + bdr + 'padding:8px 10px;text-align:left">' + (item.desc || '') + '</td>';
+      html += '<td style="' + bdr + 'padding:8px 10px;text-align:center">' + (item.id || '') + '</td>';
+      html += '</tr>';
+    });
+  });
+  html += '</table>';
+  return html;
+}
+
 function showMail() {
   if (!isComplete()) return;
-  const badge = document.getElementById('week-badge').textContent;
-  let mail = '[' + badge + '] 내공상자 추천 콘텐츠 안내\n\n안녕하세요, 선생님! 😊\n학년별 추천 콘텐츠를 안내드립니다.\n\n';
-  GRADES.forEach(function(g) {
-    mail += '📚 ' + g.label + '\n';
-    state.selected[g.key].forEach(function(item, i) {
-      mail += '  ' + (i+1) + '. [' + item.c + '] ' + item.s + ' — ' + item.t + '\n';
-      if (item.desc) mail += '     ' + item.desc + '\n';
-    });
-    mail += '\n';
-  });
-  mail += '즐거운 한 주 되세요! 🌟\n내공상자 운영팀 드림';
-  document.getElementById('mail-pre').textContent = mail;
+  var range = getMailDateRange();
+  var subject = '[초등팀] 글로벌리더십 내공상자 추천 ' + range.start + '~' + range.end + ' 안내입니다.';
+  document.getElementById('mail-subject').textContent = subject;
+
+  var tableHTML = buildTableHTML(range);
+  var preview = document.getElementById('mail-preview');
+  preview.innerHTML =
+    '<p>안녕하세요.</p>' +
+    '<p>초등팀 최지우입니다.</p>' +
+    '<br>' +
+    '<p>글로벌리더십 내공상자 추천 영상을 다음과 같이 안내드립니다.</p>' +
+    '<br>' +
+    tableHTML +
+    '<br>' +
+    '<p>콘텐츠 관련하여 추가적으로 필요하신 정보가 있으면 말씀주세요.</p>' +
+    '<br>' +
+    '<p>감사합니다~!</p>';
+
   document.getElementById('mail-modal').style.display = 'flex';
 }
+
 function closeMail() { document.getElementById('mail-modal').style.display = 'none'; }
-function copyMail() {
-  navigator.clipboard.writeText(document.getElementById('mail-pre').textContent).then(function() {
-    const btn = document.querySelector('.btn-copy');
-    btn.textContent = '✓ 복사됨';
-    setTimeout(function(){ btn.textContent = '복사'; }, 1500);
+
+function copyAll() {
+  var range = getMailDateRange();
+  var subject = '[초등팀] 글로벌리더십 내공상자 추천 ' + range.start + '~' + range.end + ' 안내입니다.';
+  var tableHTML = buildTableHTML(range);
+  var bodyHTML =
+    '<p>안녕하세요.</p>' +
+    '<p>초등팀 최지우입니다.</p>' +
+    '<br>' +
+    '<p>글로벌리더십 내공상자 추천 영상을 다음과 같이 안내드립니다.</p>' +
+    '<br>' +
+    tableHTML +
+    '<br>' +
+    '<p>콘텐츠 관련하여 추가적으로 필요하신 정보가 있으면 말씀주세요.</p>' +
+    '<br>' +
+    '<p>감사합니다~!</p>';
+
+  // HTML + 텍스트 모두 클립보드에 복사 (메일 클라이언트에 붙여넣기 시 서식 유지)
+  var fullHTML = '<html><body>' + bodyHTML + '</body></html>';
+  try {
+    var blob = new Blob([fullHTML], { type: 'text/html' });
+    var item = new ClipboardItem({ 'text/html': blob });
+    navigator.clipboard.write([item]).then(function() {
+      var btn = document.getElementById('btn-copy-all');
+      btn.textContent = '✓ 복사됨!';
+      setTimeout(function(){ btn.textContent = '📋 전체 복사'; }, 2000);
+    });
+  } catch(e) {
+    // fallback: 텍스트로 복사
+    navigator.clipboard.writeText(subject + '\n\n' + document.getElementById('mail-preview').innerText).then(function() {
+      var btn = document.getElementById('btn-copy-all');
+      btn.textContent = '✓ 복사됨 (텍스트)';
+      setTimeout(function(){ btn.textContent = '📋 전체 복사'; }, 2000);
+    });
+  }
+}
+
+function copySubject() {
+  var range = getMailDateRange();
+  var subject = '[초등팀] 글로벌리더십 내공상자 추천 ' + range.start + '~' + range.end + ' 안내입니다.';
+  navigator.clipboard.writeText(subject).then(function() {
+    var btn = document.getElementById('btn-copy-subj');
+    btn.textContent = '✓ 복사됨!';
+    setTimeout(function(){ btn.textContent = '제목 복사'; }, 2000);
   });
+}
+
+function copyTableOnly() {
+  var range = getMailDateRange();
+  var tableHTML = buildTableHTML(range);
+  try {
+    var blob = new Blob([tableHTML], { type: 'text/html' });
+    var item = new ClipboardItem({ 'text/html': blob });
+    navigator.clipboard.write([item]).then(function() {
+      var btn = document.getElementById('btn-copy-tbl');
+      btn.textContent = '✓ 복사됨!';
+      setTimeout(function(){ btn.textContent = '표만 복사'; }, 2000);
+    });
+  } catch(e) {
+    navigator.clipboard.writeText(document.querySelector('.mail-preview table').innerText).then(function() {
+      var btn = document.getElementById('btn-copy-tbl');
+      btn.textContent = '✓ 복사됨!';
+      setTimeout(function(){ btn.textContent = '표만 복사'; }, 2000);
+    });
+  }
 }
 
 
